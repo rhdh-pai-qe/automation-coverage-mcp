@@ -29,6 +29,10 @@ Use the **automation-coverage** MCP as the planner and **playwright** MCP as the
    - Then write `@playwright/test` TypeScript mirroring the named template (page objects, `getTranslations()`, `APP_MODE`).
    - Run the spec; iterate until it passes; close the browser.
 7. Do not duplicate the same assertion at a more expensive layer. Do not add a test whose only rationale is a coverage percentage.
+8. After generating new code, check that the workspace compiles, and adheres to the code standards
+   - Run `tsc` to check for compilation errors
+   - Run `lint` to check for linting issues
+   - Run `prettier:fix` to check and fix the code styling
 
 ## Layers (cheapest wins)
 

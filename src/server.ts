@@ -480,6 +480,46 @@ export function createServer(): McpServer {
   );
 
   server.registerPrompt(
+    'jira_ticket_to_coverage',
+    {
+      title: 'Jira ticket → automation coverage',
+      description:
+        'Read a Jira ticket with Atlassian MCP, map component to workspace, then run generate_test_plan and execute every work item. Pair with jira-automation-coverage skill.',
+      argsSchema: {
+        jiraKey: z.string().describe('Jira issue key, e.g. RHIDP-12345'),
+        workspace: z.string().optional().describe('Workspace dir if component mapping is ambiguous'),
+        cwd: z.string().optional().describe('Plugin workspace path'),
+        mode: z.enum(['diff', 'workspace']).optional(),
+      },
+    },
+    async ({ jiraKey, workspace, cwd, mode }) => ({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: [
+              `Complete automation for Jira ${jiraKey} using Atlassian MCP + automation-coverage MCP + Playwright MCP.`,
+              '',
+              'Steps:',
+              `1. Atlassian MCP: read issue ${jiraKey} — summary, description, component, acceptance criteria.`,
+              '2. If this is a product bug (repro steps), STOP and use bug-fix instead.',
+              '3. Map Jira Component to rhdh-plugins workspace (e.g. Lightspeed → lightspeed, Scorecard → scorecard).',
+              workspace ? `4. Workspace hint: ${workspace}` : '4. Resolve workspace from component or ask user.',
+              cwd ? `5. cwd: ${cwd}` : '5. cwd: workspaces/<workspace> under rhdh-plugins (see ~/.config/automation-coverage/config.yaml).',
+              '6. Run yarn test --coverage in workspace if no coverage report exists.',
+              `7. generate_test_plan with mode=${mode ?? 'workspace or diff based on branch state'}.`,
+              '8. Execute every work item (Playwright MCP for playwrightMcp:true items).',
+              '9. yarn tsc:full && yarn test --watchAll=false',
+              `10. Atlassian MCP: comment on ${jiraKey} with what was done.`,
+            ].join('\n'),
+          },
+        },
+      ],
+    }),
+  );
+
+  server.registerPrompt(
     'unit_from_coverage',
     {
       title: 'Unit/integration tests from coverage gaps',

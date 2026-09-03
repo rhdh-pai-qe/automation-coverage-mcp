@@ -14,15 +14,20 @@ Plugins live at multiple levels (`workspaces/<ws>/plugins/<plugin>`, backend mod
 
 Coverage ranks gaps. It is not a merge gate. Each brief states the **failure the test must catch**.
 
-## Pair with Playwright MCP
+## Pair with Playwright MCP and Jira
 
-Add both servers to Cursor MCP config (`~/.cursor/mcp.json`, or `.cursor/mcp.json` in this clone). Playwright needs the testing capability so `browser_generate_locator` and `browser_verify_*` are available.
+Add all three servers to Cursor MCP config (`~/.cursor/mcp.json`, or `.cursor/mcp.json` in this clone). Playwright needs the testing capability so `browser_generate_locator` and `browser_verify_*` are available. Atlassian MCP reads Jira tickets so agents can complete automation work from RHIDP / RHDHBUGS keys.
+
+**Jira auth (one-time):** Restart Cursor after editing mcp.json → Settings → Tools & MCP → toggle `atlassian` → ask the agent to read a ticket → complete OAuth and select `redhat.atlassian.net`.
 
 Substitute **`<ABS_PATH_TO_THIS_CLONE>`** with the absolute path of this repository on your machine (the directory that contains `src/index.ts`).
 
 ```json
 {
   "mcpServers": {
+    "atlassian": {
+      "url": "https://mcp.atlassian.com/v2/mcp"
+    },
     "automation-coverage": {
       "command": "npx",
       "args": ["tsx", "<ABS_PATH_TO_THIS_CLONE>/src/index.ts"]
@@ -58,7 +63,20 @@ Do not write Playwright from the scenario paragraph alone.
 | `generate_layer_brief` | One layer (unit / integration / …) |
 | `generate_playwright_brief` | Playwright MCP prompt from UI gaps |
 
-Prompts: `fill_automation_gaps`, `playwright_from_coverage`, `unit_from_coverage`.
+Prompts: `fill_automation_gaps`, `playwright_from_coverage`, `unit_from_coverage`, `jira_ticket_to_coverage`.
+
+## Jira-driven workflow
+
+Use the **jira-automation-coverage** skill (`~/.cursor/skills/jira-automation-coverage/SKILL.md`) or prompt `jira_ticket_to_coverage`:
+
+1. **Atlassian MCP** — read ticket (summary, component, acceptance criteria).
+2. **Classify** — product bugs → `bug-fix`; coverage/e2e gaps → continue.
+3. **Map** — Jira Component → `workspaces/<name>` in rhdh-plugins.
+4. **automation-coverage MCP** — `generate_test_plan` with `cwd` set to that workspace.
+5. **Execute** — implement every work item; Playwright MCP for UI layers.
+6. **Atlassian MCP** — comment on the ticket with results.
+
+Example: `Complete RHIDP-12345 — fill scorecard automation gaps.`
 
 ## Pluggable layers
 

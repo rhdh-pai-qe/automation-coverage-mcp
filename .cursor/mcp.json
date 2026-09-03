@@ -1,5 +1,8 @@
 {
   "mcpServers": {
+    "atlassian": {
+      "url": "https://mcp.atlassian.com/v2/mcp"
+    },
     "automation-coverage": {
       "command": "npx",
       "args": ["tsx", "./src/index.ts"]

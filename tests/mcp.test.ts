@@ -32,6 +32,8 @@ describe('MCP server', () => {
         'generate_test_plan',
         'generate_layer_brief',
         'generate_playwright_brief',
+        'plan_qe_from_feature',
+        'groom_qe_tickets',
       ]),
     );
 
@@ -41,6 +43,8 @@ describe('MCP server', () => {
         'fill_automation_gaps',
         'playwright_from_coverage',
         'unit_from_coverage',
+        'feature_to_qe_tickets',
+        'jira_ticket_to_coverage',
       ]),
     );
 

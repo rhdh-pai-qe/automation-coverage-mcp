@@ -8,6 +8,7 @@ import { discoverPackages, packageForPath } from './discovery/layout.js';
 import { inventoryLayer } from './inventory/tests.js';
 import { runPipeline } from './pipeline.js';
 import { recommendPlan } from './plan/recommend.js';
+import { planQeFromFeature } from './qe/from-feature.js';
 import type { DiscoveredPackage, TestPlan } from './types.js';
 
 function json(data: unknown) {
@@ -26,13 +27,14 @@ export function createServer(): McpServer {
   const server = new McpServer(
     {
       name: 'automation-coverage',
-      version: '0.1.0',
+      version: '0.2.0',
     },
     {
       instructions: [
         'Coverage-driven automation planner for RHDH / Backstage plugin forests.',
         'Analyze git changes, read Istanbul/LCOV coverage, and emit pluggable test-layer briefs.',
         'UI layers must be executed with Playwright MCP (explore, then write). Do not generate Playwright from text alone.',
+        'For QE epics/stories from a Feature, call plan_qe_from_feature or groom_qe_tickets then create/edit issues with Atlassian MCP.',
         ...PLAN_PRINCIPLES,
       ].join('\n'),
     },
@@ -473,6 +475,103 @@ export function createServer(): McpServer {
               'browser_navigate → browser_snapshot → interact → browser_generate_locator → browser_verify_* → write @playwright/test spec → run → iterate.',
               'Mirror the template file named in the brief. Prefer page objects and translation keys.',
             ].join('\n'),
+          },
+        },
+      ],
+    }),
+  );
+
+  const existingIssueSchema = z.object({
+    key: z.string(),
+    summary: z.string(),
+    description: z.string().optional(),
+    issueType: z.string().optional(),
+  });
+
+  server.registerTool(
+    'plan_qe_from_feature',
+    {
+      title: 'Plan QE epic + layer tickets from a Feature',
+      description:
+        'Read a product Feature (title, description, acceptance criteria) and emit a RHIDP QE Epic plus one Story per cheapest test layer (L1–L4b). Does not create Jira issues — the agent uses Atlassian MCP createJiraIssue with the returned jira payloads. Pair with Playwright MCP only for UI-layer stories.',
+      inputSchema: {
+        feature: z
+          .string()
+          .describe('Feature title + description + acceptance criteria (paste or from getJiraIssue)'),
+        featureTitle: z.string().optional().describe('Override for the Feature summary line'),
+        featureKey: z
+          .string()
+          .optional()
+          .describe('Parent Feature key, e.g. RHDHPLAN-1742 — set as Epic parent'),
+        workspace: z.string().optional().describe('rhdh-plugins workspace, e.g. boost'),
+        cwd: z.string().optional().describe('Plugin workspace path to inventory existing tests'),
+        projectKey: z.string().optional().describe('Jira project, default RHIDP'),
+      },
+    },
+    async args => json(planQeFromFeature(args)),
+  );
+
+  server.registerTool(
+    'groom_qe_tickets',
+    {
+      title: 'Groom existing QE epic/stories with layer details',
+      description:
+        'Given a Feature plus existing Jira issues (epic/children), return updated summaries/descriptions that add cheapest-layer scope, failure-to-catch, and out-of-scope. Agent applies them with Atlassian MCP editJiraIssue. Idempotent via automation-coverage markers.',
+      inputSchema: {
+        feature: z.string().describe('Feature text used to recompute the layer plan'),
+        featureTitle: z.string().optional(),
+        featureKey: z.string().optional(),
+        workspace: z.string().optional(),
+        cwd: z.string().optional(),
+        projectKey: z.string().optional(),
+        existingIssues: z
+          .array(existingIssueSchema)
+          .describe('Current epic and children from Jira (key, summary, description, issueType)'),
+      },
+    },
+    async args => json(planQeFromFeature(args)),
+  );
+
+  server.registerPrompt(
+    'feature_to_qe_tickets',
+    {
+      title: 'Feature → QE epic and layer stories',
+      description:
+        'Turn a product Feature into a RHIDP QE Epic and cheapest-layer Stories, then create or groom them with Atlassian MCP.',
+      argsSchema: {
+        feature: z.string().optional().describe('Feature body if not fetching from Jira'),
+        featureKey: z.string().optional().describe('RHDHPLAN / RHIDP Feature key'),
+        workspace: z.string().optional(),
+        cwd: z.string().optional(),
+        projectKey: z.string().optional(),
+      },
+    },
+    async ({ feature, featureKey, workspace, cwd, projectKey }) => ({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: [
+              'Create or groom QE Jira work from a product Feature using automation-coverage MCP + Atlassian MCP.',
+              '',
+              'Steps:',
+              '1. getAccessibleAtlassianResources → cache cloudId.',
+              featureKey
+                ? `2. getJiraIssue ${featureKey} (view=evidence). Use summary+description as the Feature.`
+                : '2. Use the Feature text the user provided (do not invent product scope).',
+              feature ? `Feature text:\n${feature}` : '',
+              '3. Search JQL: parent = <featureKey> AND summary ~ "QE" (and children of any [QE] epic found).',
+              '4. If no QE epic exists: plan_qe_from_feature → createJiraIssue Epic (parent=featureKey) → createJiraIssue each Story with parent=epic key. Use the tool `jira` payloads (markdown descriptions, labels).',
+              '5. If a QE epic/children exist: groom_qe_tickets with existingIssues → editJiraIssue each updates[] row.',
+              '6. Do not add cluster/overlay stories unless the Feature signaled live stack / operator / OCI. Cheapest layer wins.',
+              '7. Comment on the Feature with the created/groomed keys.',
+              workspace ? `Workspace hint: ${workspace}` : '',
+              cwd ? `cwd: ${cwd}` : '',
+              projectKey ? `projectKey: ${projectKey}` : 'projectKey: RHIDP',
+            ]
+              .filter(Boolean)
+              .join('\n'),
           },
         },
       ],

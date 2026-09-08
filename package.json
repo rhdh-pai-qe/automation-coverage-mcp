@@ -1,6 +1,6 @@
 {
   "name": "automation-coverage-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Coverage-driven test generation MCP for RHDH plugin forests. Analyzes changes, reads coverage, and produces pluggable layer briefs (unit, integration, UI) for agents — pairing UI work with Playwright MCP.",
   "type": "module",
   "bin": {

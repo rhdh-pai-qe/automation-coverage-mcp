@@ -34,6 +34,14 @@ Use the **automation-coverage** MCP as the planner and **playwright** MCP as the
    - Run `lint` to check for linting issues
    - Run `prettier:fix` to check and fix the code styling
 
+## QE tickets from a Feature
+
+When asked to **create or groom QE epics/tickets** from a Feature (not to write tests yet):
+
+1. Call `plan_qe_from_feature` (or `groom_qe_tickets` if Jira children already exist) with the Feature text/key.
+2. Follow `skill/QE.md` — create/edit via Atlassian MCP using the returned `jira` payloads.
+3. Do not invent extra cluster e2e tickets the plan omitted.
+
 ## Layers (cheapest wins)
 
 | Change | Layer |

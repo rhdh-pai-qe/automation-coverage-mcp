@@ -62,8 +62,10 @@ Do not write Playwright from the scenario paragraph alone.
 | `generate_test_plan` | Full ordered plan with briefs. `mode=workspace` fills layers on a clean branch |
 | `generate_layer_brief` | One layer (unit / integration / …) |
 | `generate_playwright_brief` | Playwright MCP prompt from UI gaps |
+| `plan_qe_from_feature` | Feature text → QE Epic + one Story per cheapest layer (Jira payloads; does not create issues) |
+| `groom_qe_tickets` | Same plan merged into existing epic/children for `editJiraIssue` |
 
-Prompts: `fill_automation_gaps`, `playwright_from_coverage`, `unit_from_coverage`, `jira_ticket_to_coverage`.
+Prompts: `fill_automation_gaps`, `playwright_from_coverage`, `unit_from_coverage`, `jira_ticket_to_coverage`, `feature_to_qe_tickets`.
 
 ## Jira-driven workflow
 
@@ -77,6 +79,17 @@ Use the **jira-automation-coverage** skill (`~/.cursor/skills/jira-automation-co
 6. **Atlassian MCP** — comment on the ticket with results.
 
 Example: `Complete RHIDP-12345 — fill scorecard automation gaps.`
+
+## Feature → QE epic / stories
+
+Reverse of the above: a **product Feature** (paste or `RHDHPLAN-…`) becomes a `[QE]` epic plus `[L1]`/`[L3]`/`[L4a]` stories.
+
+1. Atlassian MCP — read the Feature; search for an existing `[QE]` epic.
+2. **automation-coverage MCP** — `plan_qe_from_feature` (create) or `groom_qe_tickets` (update).
+3. Atlassian MCP — `createJiraIssue` / `editJiraIssue` using each `jira` payload (markdown). Stories’ `parent` is the QE epic key.
+4. Cluster/overlay tickets appear only when the Feature signals live stack, operator, or OCI.
+
+Example: `Create the QE epic and layer tickets for RHDHPLAN-1742 (Boost workspace).`
 
 ## Pluggable layers
 
